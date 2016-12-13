@@ -7,8 +7,10 @@ import "time"
 
 type Config struct {
 	Period time.Duration `config:"period"`
+	Subreddit string `config:"subreddit"`
 }
 
 var DefaultConfig = Config{
-	Period: 1 * time.Second,
+	Period: 15 * time.Second,
+	Subreddit: "elastic",
 }
