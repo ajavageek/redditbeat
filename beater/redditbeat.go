@@ -20,14 +20,14 @@ type Redditbeat struct {
 
 // Creates beater
 func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
-	config := config.DefaultConfig
-	if err := cfg.Unpack(&config); err != nil {
+	configuration := config.DefaultConfig
+	if err := cfg.Unpack(&configuration); err != nil {
 		return nil, fmt.Errorf("Error reading config file: %v", err)
 	}
 
 	bt := &Redditbeat{
 		done: make(chan struct{}),
-		config: config,
+		config: configuration,
 	}
 	return bt, nil
 }
