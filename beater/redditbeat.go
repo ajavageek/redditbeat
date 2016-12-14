@@ -12,6 +12,7 @@ import (
 	"github.com/nfrankel/redditbeat/config"
 	"net/http"
 	"io/ioutil"
+	"strings"
 )
 
 type Redditbeat struct {
@@ -19,6 +20,10 @@ type Redditbeat struct {
 	config config.Config
 	client publisher.Client
 }
+
+const prefix string = "{\"kind\": \"Listing\", \"data\": {\"modhash\": \"\", \"children\": [{"
+const suffix string = "}], \"after\": \"t3_5hy3jj\", \"before\": null}}"
+const separator string = "}, {"
 
 // Creates beater
 func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
@@ -59,19 +64,20 @@ func (bt *Redditbeat) Run(b *beat.Beat) error {
 		status := resp.Status
 		logp.Info("HTTP status code is " + status)
 		body, readErr := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
 		if (readErr != nil) {
 			panic(readErr)
 		}
-		message := string(body)
-		logp.Info(message)
-		event := common.MapStr{
-			"@timestamp": common.Time(time.Now()),
-			"type":       b.Name,
-			"message":    message,
+		defer resp.Body.Close()
+		trimmedBody := body[len(prefix):len(body) - len(suffix)]
+		messages := strings.Split(string(trimmedBody), separator)
+		for i := 0; i < len(messages); i ++ {
+			event := common.MapStr{
+				"@timestamp": common.Time(time.Now()),
+				"type":       b.Name,
+				"message":    "{" + messages[i] + "}",
+			}
+			bt.client.PublishEvent(event)
 		}
-		bt.client.PublishEvent(event)
-		logp.Info("Event sent")
 	}
 }
 
