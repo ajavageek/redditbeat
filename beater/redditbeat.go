@@ -10,6 +10,8 @@ import (
 	"github.com/elastic/beats/libbeat/publisher"
 
 	"github.com/nfrankel/redditbeat/config"
+	"net/http"
+	"io/ioutil"
 )
 
 type Redditbeat struct {
@@ -36,22 +38,40 @@ func (bt *Redditbeat) Run(b *beat.Beat) error {
 	logp.Info("redditbeat is running! Hit CTRL-C to stop it.")
 	bt.client = b.Publisher.Connect()
 	ticker := time.NewTicker(bt.config.Period)
-	counter := 1
+	reddit := "https://www.reddit.com/r/" + bt.config.Subreddit + "/.json"
+	client := &http.Client {}
+	logp.Info("URL configured to " + reddit)
 	for {
 		select {
 		case <-bt.done:
 			return nil
 		case <-ticker.C:
 		}
-
+		req, reqErr := http.NewRequest("GET", reddit, nil)
+		req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36")
+		if (reqErr != nil) {
+			panic(reqErr)
+		}
+		resp, getErr := client.Do(req)
+		if (getErr != nil) {
+			panic(getErr)
+		}
+		status := resp.Status
+		logp.Info("HTTP status code is " + status)
+		body, readErr := ioutil.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		if (readErr != nil) {
+			panic(readErr)
+		}
+		message := string(body)
+		logp.Info(message)
 		event := common.MapStr{
 			"@timestamp": common.Time(time.Now()),
 			"type":       b.Name,
-			"counter":    counter,
+			"message":    message,
 		}
 		bt.client.PublishEvent(event)
 		logp.Info("Event sent")
-		counter++
 	}
 }
 
